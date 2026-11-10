@@ -22,26 +22,24 @@ public class ModArmorMaterials {
 
     public static final RegistryObject<ArmorMaterial> OBSIDIAN_EVO_ARMOR = ARMOR_MATERIALS.register("mi_armadura",
             () -> new ArmorMaterial(
-                    // 1. Mapa de durabilidad masiva (100,000 usos reales para cada pieza)
+                    // 1. EL MAPA DE USOS/DURABILIDAD (Aquí están los 100,000 para cada pieza)
                     Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
                         map.put(ArmorItem.Type.BOOTS, 100000);
                         map.put(ArmorItem.Type.LEGGINGS, 100000);
                         map.put(ArmorItem.Type.CHESTPLATE, 100000);
                         map.put(ArmorItem.Type.HELMET, 100000);
                     }),
-                    // 2. Defensa base global en formato entero (número limpio de 15)
+                    // 2. Encantabilidad (int)
                     15,
-                    // 3. Encantabilidad
-                    15,
-                    // 4. Sonido de equipamiento
+                    // 3. Sonido de equipamiento
                     SoundEvents.ARMOR_EQUIP_NETHERITE,
-                    // 5. Material de reparación (Obsidiana)
+                    // 4. Material de reparación
                     () -> Ingredient.of(Items.OBSIDIAN),
-                    // 6. Capa de textura
+                    // 5. Capas de textura
                     List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ObsidianEvoMod.MOD_ID, "mi_armadura"))),
-                    // 7. Dureza de armadura (Armor Toughness)
+                    // 6. Dureza de armadura (Armor Toughness)
                     3.0f,
-                    // 8. Resistencia al empuje
+                    // 7. Resistencia al empuje (Knockback Resistance)
                     0.1f
             ));
 
