@@ -15,7 +15,6 @@ import net.minecraftforge.registries.RegistryObject;
 
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 
 public class ModArmorMaterials {
     public static final DeferredRegister<ArmorMaterial> ARMOR_MATERIALS =
@@ -30,13 +29,8 @@ public class ModArmorMaterials {
                         map.put(ArmorItem.Type.CHESTPLATE, 100000);
                         map.put(ArmorItem.Type.HELMET, 100000);
                     }),
-                    // 2. Mapa de defensa estándar por pieza (Botas: 3, Leggings: 6, Pechera: 8, Casco: 3)
-                    Map.of(
-                            ArmorItem.Type.BOOTS, 1,
-                            ArmorItem.Type.LEGGINGS, 1,
-                            ArmorItem.Type.CHESTPLATE, 1,
-                            ArmorItem.Type.HELMET, 1
-                    ),
+                    // 2. Defensa base global en formato entero (número limpio de 15)
+                    15,
                     // 3. Encantabilidad
                     15,
                     // 4. Sonido de equipamiento
