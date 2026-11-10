@@ -84,7 +84,7 @@ public class ModCombatEvents {
             ItemStack mainHand = attacker.getMainHandItem();
             if (mainHand.getItem() instanceof EvolvingSwordItem) {
                 // Otorga una buena cantidad de Puntos de Alma al derrotar al enemigo (ej. 25 puntos por baja)
-                EvolvingSwordItem.addSoulPoints(mainHand, 25);
+                EvolvingSwordItem.addSoulPoints(mainHand, 5);
                 
                 // Opcional: Curación extra al eliminar enemigos como recompensa
                 attacker.heal(6.0f);
