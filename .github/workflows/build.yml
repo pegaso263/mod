@@ -22,10 +22,9 @@ jobs:
 
       - name: Build with Gradle
         run: gradle build
-        working-directory: ./mod
 
       - name: Upload Jar Artifact
         uses: actions/upload-artifact@v4
         with:
           name: obsidian-evo-jar
-          path: ./mod/build/libs/*.jar
+          path: build/libs/*.jar
