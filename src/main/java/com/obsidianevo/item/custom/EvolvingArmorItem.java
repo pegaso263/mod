@@ -17,10 +17,11 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
+import java.util.Random;
 
 public class EvolvingArmorItem extends ArmorItem {
     public static final String DAMAGE_ABSORBED_KEY = "DamageAbsorbed";
-    public static final float MAX_DAMAGE_ABSORBED = 5000.0f;
+    private static final Random RANDOM = new Random();
 
     public EvolvingArmorItem(Holder<ArmorMaterial> pMaterial, Type pType, Properties pProperties) {
         super(pMaterial, pType, pProperties);
@@ -34,13 +35,28 @@ public class EvolvingArmorItem extends ArmorItem {
     public static void addDamageAbsorbed(ItemStack stack, float amount) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
             float current = tag.getFloat(DAMAGE_ABSORBED_KEY);
-            tag.putFloat(DAMAGE_ABSORBED_KEY, Math.min(MAX_DAMAGE_ABSORBED, current + amount));
+            // Crecimiento casi infinito (sin tope artificial bajo)
+            tag.putFloat(DAMAGE_ABSORBED_KEY, current + amount);
         });
     }
 
-    // Escala de 0 a 100 niveles (1 nivel cada 50 de daño, hasta 5000)
-    public static int getPieceLevel(ItemStack stack) {
-        return Math.min(100, (int) (getDamageAbsorbed(stack) / 50.0f));
+    // Cada punto de daño absorbido otorga 0.01% extra de mitigación por pieza (crecimiento continuo)
+    public static float getPieceMitigationBonus(ItemStack stack) {
+        return getDamageAbsorbed(stack) * 0.01f; 
+    }
+
+    // Dureza progresiva: Entre más daño absorbe, más irrompible se vuelve (hasta 98% de probabilidad de no gastar durabilidad)
+    @Override
+    public void setDamage(ItemStack stack, int damage) {
+        int currentDamage = this.getDamage(stack);
+        if (damage > currentDamage) {
+            float absorbed = getDamageAbsorbed(stack);
+            float saveChance = Math.min(0.98f, absorbed / 10000.0f); // Se vuelve casi indestructible a los 10k de daño absorbido
+            if (RANDOM.nextFloat() < saveChance) {
+                return;
+            }
+        }
+        super.setDamage(stack, damage);
     }
 
     @Override
@@ -89,15 +105,16 @@ public class EvolvingArmorItem extends ArmorItem {
     @Override
     public void appendHoverText(ItemStack pStack, TooltipContext pContext, List<Component> pTooltipComponents, TooltipFlag pTooltipFlag) {
         float absorbed = getDamageAbsorbed(pStack);
-        int level = getPieceLevel(pStack);
+        float mitigation = getPieceMitigationBonus(pStack);
+        int hardnessBonus = (int) (Math.min(1.0f, absorbed / 10000.0f) * 98);
 
-        pTooltipComponents.add(Component.literal("Nivel de Adaptación: " + level + "/100").withStyle(ChatFormatting.AQUA));
-        pTooltipComponents.add(Component.literal("Daño absorbido: " + String.format("%.1f", absorbed) + " / 5000").withStyle(ChatFormatting.GRAY));
-        pTooltipComponents.add(Component.literal("Mitigación extra: +" + String.format("%.1f", level * 0.22f) + "%").withStyle(ChatFormatting.GREEN));
+        pTooltipComponents.add(Component.literal("Daño Absorbido: " + String.format("%.1f", absorbed)).withStyle(ChatFormatting.AQUA));
+        pTooltipComponents.add(Component.literal("Mitigación de Pieza: +" + String.format("%.2f", mitigation) + "%").withStyle(ChatFormatting.GREEN));
+        pTooltipComponents.add(Component.literal("Dureza Evolutiva: +" + hardnessBonus + "% resistencia al desgaste").withStyle(ChatFormatting.GOLD));
         if (this.getType() == Type.BOOTS) {
-            pTooltipComponents.add(Component.literal("Pasiva: Inmunidad al daño de caída.").withStyle(ChatFormatting.BLUE));
+            pTooltipComponents.add(Component.literal("Pasiva: Inmunidad al daño de caída.").withStyle(ChatFormatting.LIGHT_PURPLE));
         }
-        pTooltipComponents.add(Component.literal("Bonus de Set (4 pzas): Resistencia, Velocidad y Regeneración.").withStyle(ChatFormatting.GOLD));
+        pTooltipComponents.add(Component.literal("Bonus de Set (4 pzas): Resistencia, Velocidad y Regeneración.").withStyle(ChatFormatting.YELLOW));
 
         super.appendHoverText(pStack, pContext, pTooltipComponents, pTooltipFlag);
     }
