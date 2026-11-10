@@ -2,14 +2,13 @@ package com.obsidianevo.item;
 
 import com.obsidianevo.ObsidianEvoMod;
 import net.minecraft.Util;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.Level;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
@@ -23,26 +22,25 @@ public class ModArmorMaterials {
 
     public static final RegistryObject<ArmorMaterial> OBSIDIAN_EVO_ARMOR = ARMOR_MATERIALS.register("mi_armadura",
             () -> new ArmorMaterial(
-                    // Aquí establecemos 100,000 de durabilidad base multiplicada para cada ranura de equipo
+                    // 1. Mapa de durabilidad masiva (100,000 usos para cada pieza)
                     Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
                         map.put(ArmorItem.Type.BOOTS, 100000);
                         map.put(ArmorItem.Type.LEGGINGS, 100000);
                         map.put(ArmorItem.Type.CHESTPLATE, 100000);
                         map.put(ArmorItem.Type.HELMET, 100000);
                     }),
-                    // Defensa equilibrada (ej. 3 para botas, 6 para piernas, 8 para pechera, 3 para casco -> en total da una buena defensa base)
-                    Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
-                        map.put(ArmorItem.Type.BOOTS, 1);
-                        map.put(ArmorItem.Type.LEGGINGS, 1);
-                        map.put(ArmorItem.Type.CHESTPLATE, 1);
-                        map.put(ArmorItem.Type.HELMET, 1);
-                    }),
-                    15, // Nivel de encantabilidad (Enchantability)
+                    // 2. Defensa base estándar (15 puntos totales distribuidos equilibradamente)
+                    15,
+                    // 3. Sonido de equipamiento
                     SoundEvents.ARMOR_EQUIP_NETHERITE,
+                    // 4. Material de reparación (Obsidiana)
                     () -> Ingredient.of(Items.OBSIDIAN),
+                    // 5. Capas de textura de la armadura
                     List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ObsidianEvoMod.MOD_ID, "mi_armadura"))),
-                    0.0f, // Dureza de armadura (Armor Toughness)
-                    0.0f  // Resistencia a la temperatura/knockback
+                    // 6. Dureza de la armadura (Armor Toughness)
+                    3.0f,
+                    // 7. Resistencia al empuje (Knockback Resistance)
+                    0.1f
             ));
 
     public static void register(IEventBus eventBus) {
