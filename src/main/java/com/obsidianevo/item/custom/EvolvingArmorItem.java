@@ -4,10 +4,14 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
@@ -20,6 +24,7 @@ import java.util.List;
 
 public class EvolvingArmorItem extends ArmorItem {
     public static final String DAMAGE_ABSORBED_KEY = "DamageAbsorbed";
+    private static final ResourceLocation HEALTH_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("obsidianevo", "extra_health_bonus");
 
     public EvolvingArmorItem(Holder<ArmorMaterial> pMaterial, Type pType, Properties pProperties) {
         super(pMaterial, pType, pProperties.durability(100000));
@@ -45,9 +50,7 @@ public class EvolvingArmorItem extends ArmorItem {
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
         if (!level.isClientSide() && entity instanceof Player player) {
-            if (this.getType() == Type.HELMET && hasFullSet(player)) {
-                applySetEffects(player);
-            }
+            handleArmorFeatures(player);
         }
     }
 
@@ -55,8 +58,18 @@ public class EvolvingArmorItem extends ArmorItem {
     public void onInventoryTick(ItemStack stack, Level level, Player player, int slotIndex, int selectedIndex) {
         super.onInventoryTick(stack, level, player, slotIndex, selectedIndex);
         if (!level.isClientSide()) {
-            if (this.getType() == Type.HELMET && hasFullSet(player)) {
+            handleArmorFeatures(player);
+        }
+    }
+
+    private void handleArmorFeatures(Player player) {
+        // Ejecutamos la lógica una sola vez por tick desde el Casco
+        if (this.getType() == Type.HELMET) {
+            if (hasFullSet(player)) {
                 applySetEffects(player);
+                applyHealthAndFlight(player);
+            } else {
+                removeHealthAndFlight(player);
             }
         }
     }
@@ -77,7 +90,6 @@ public class EvolvingArmorItem extends ArmorItem {
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         float mitigation = getPieceMitigationBonus(chest);
 
-        // Determinación del amplificador (0 = Nivel I, 1 = Nivel II, 2 = Nivel III, 3 = Nivel IV)
         int amplifier = 0;
         if (mitigation >= 80.0f) {
             amplifier = 3;
@@ -87,13 +99,68 @@ public class EvolvingArmorItem extends ArmorItem {
             amplifier = 1;
         }
 
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 220, amplifier, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 220, Math.min(amplifier, 1), false, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 220, amplifier, false, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 220, 0, false, false, true));
 
         MobEffectInstance regen = player.getEffect(MobEffects.REGENERATION);
         if (regen == null || regen.getDuration() <= 20 || regen.getAmplifier() < amplifier) {
             player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, amplifier, false, false, true));
+        }
+    }
+
+    private void applyHealthAndFlight(Player player) {
+        ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
+        float absorbed = getDamageAbsorbed(chest);
+        float mitigation = getPieceMitigationBonus(chest);
+
+        // 1. Salud extra: 1 corazón (2 puntos de vida) por cada 20 de daño absorbido
+        // Hasta 20 corazones extra (40 puntos de vida adicionales -> total 40 corazones con los 10 base)
+        int extraHearts = (int) (absorbed / 20.0f);
+        double bonusHealth = Math.min(40.0, extraHearts * 2.0);
+
+        AttributeInstance healthAttr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (healthAttr != null) {
+            healthAttr.removeModifier(HEALTH_MODIFIER_ID);
+            if (bonusHealth > 0) {
+                healthAttr.addTransientModifier(new AttributeModifier(
+                        HEALTH_MODIFIER_ID,
+                        bonusHealth,
+                        AttributeModifier.Operation.ADD_VALUE
+                ));
+            }
+        }
+
+        // 2. Vuelo: Al superar el 50% de mitigación
+        if (mitigation >= 50.0f) {
+            if (!player.getAbilities().mayfly) {
+                player.getAbilities().mayfly = true;
+                player.onUpdateAbilities();
+            }
+        } else if (!player.isCreative() && !player.isSpectator()) {
+            if (player.getAbilities().mayfly) {
+                player.getAbilities().mayfly = false;
+                player.getAbilities().flying = false;
+                player.onUpdateAbilities();
+            }
+        }
+    }
+
+    private void removeHealthAndFlight(Player player) {
+        // Remover corazones extra si no tiene el set puesto
+        AttributeInstance healthAttr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (healthAttr != null && healthAttr.getModifier(HEALTH_MODIFIER_ID) != null) {
+            healthAttr.removeModifier(HEALTH_MODIFIER_ID);
+            if (player.getHealth() > player.getMaxHealth()) {
+                player.setHealth(player.getMaxHealth());
+            }
+        }
+
+        // Desactivar vuelo si se quita la armadura
+        if (!player.isCreative() && !player.isSpectator() && player.getAbilities().mayfly) {
+            player.getAbilities().mayfly = false;
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
         }
     }
 
@@ -104,10 +171,18 @@ public class EvolvingArmorItem extends ArmorItem {
 
         pTooltipComponents.add(Component.literal("Daño Absorbido: " + String.format("%.1f", absorbed)).withStyle(ChatFormatting.AQUA));
         pTooltipComponents.add(Component.literal("Mitigación de Pieza: +" + String.format("%.2f", mitigation) + "%").withStyle(ChatFormatting.GREEN));
+        
+        int extraHearts = Math.min(20, (int) (absorbed / 20.0f));
+        pTooltipComponents.add(Component.literal("Vitalidad Extra: +" + extraHearts + " Corazones").withStyle(ChatFormatting.RED));
+
+        if (mitigation >= 50.0f) {
+            pTooltipComponents.add(Component.literal("Habilidad Desbloqueada: Vuelo Activo").withStyle(ChatFormatting.GOLD));
+        }
+
         if (this.getType() == Type.BOOTS) {
             pTooltipComponents.add(Component.literal("Pasiva: Inmunidad al daño de caída.").withStyle(ChatFormatting.LIGHT_PURPLE));
         }
-        
+
         int tier = 1;
         if (mitigation >= 80.0f) tier = 4;
         else if (mitigation >= 40.0f) tier = 3;
