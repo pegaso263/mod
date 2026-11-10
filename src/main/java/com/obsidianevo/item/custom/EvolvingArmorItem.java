@@ -22,7 +22,7 @@ public class EvolvingArmorItem extends ArmorItem {
     public static final String DAMAGE_ABSORBED_KEY = "DamageAbsorbed";
 
     public EvolvingArmorItem(Holder<ArmorMaterial> pMaterial, Type pType, Properties pProperties) {
-        super(pMaterial, pType, pProperties);
+        super(pMaterial, pType, pProperties.durability(100000));
     }
 
     public static float getDamageAbsorbed(ItemStack stack) {
