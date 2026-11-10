@@ -23,11 +23,10 @@ public class ModArmorMaterials {
     public static final RegistryObject<ArmorMaterial> OBSIDIAN_EVO_ARMOR = ARMOR_MATERIALS.register("mi_armadura",
         () -> new ArmorMaterial(
             Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
-                map.put(ArmorItem.Type.BOOTS, 1);
-                map.put(ArmorItem.Type.LEGGINGS, 1);
-                map.put(ArmorItem.Type.CHESTPLATE, 1);
-                map.put(ArmorItem.Type.HELMET, 1);
-                map.put(ArmorItem.Type.BODY, 1);
+                map.put(ArmorItem.Type.BOOTS, 100000);
+                map.put(ArmorItem.Type.LEGGINGS, 100000);
+                map.put(ArmorItem.Type.CHESTPLATE, 100000);
+                map.put(ArmorItem.Type.HELMET, 100000);
             }),
             15,
             SoundEvents.ARMOR_EQUIP_NETHERITE,
