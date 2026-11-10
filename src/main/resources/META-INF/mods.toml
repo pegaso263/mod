@@ -1,0 +1,9 @@
+modLoader="javafml"
+loaderVersion="[51,)"
+license="MIT"
+
+[[mods]]
+modId="obsidian_evo"
+version="1.0.0"
+displayName="Obsidian Evolution Set"
+description="Set de armadura y espada de obsidiana evolutiva que escala en combate."

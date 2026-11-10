@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "obsidian_evo:item/espada_fase_0"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "obsidian_evo:stage": 1
+      },
+      "model": "obsidian_evo:item/espada_fase_1"
+    },
+    {
+      "predicate": {
+        "obsidian_evo:stage": 2
+      },
+      "model": "obsidian_evo:item/espada_fase_2"
+    },
+    {
+      "predicate": {
+        "obsidian_evo:stage": 3
+      },
+      "model": "obsidian_evo:item/espada_fase_3"
+    }
+  ]
+}
