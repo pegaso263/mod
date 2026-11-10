@@ -24,10 +24,10 @@ public class ModArmorMaterials {
             () -> new ArmorMaterial(
                     // 1. EL MAPA DE USOS/DURABILIDAD (Aquí están los 100,000 para cada pieza)
                     Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
-                        map.put(ArmorItem.Type.BOOTS, 100000);
-                        map.put(ArmorItem.Type.LEGGINGS, 100000);
-                        map.put(ArmorItem.Type.CHESTPLATE, 100000);
-                        map.put(ArmorItem.Type.HELMET, 100000);
+                        map.put(ArmorItem.Type.BOOTS, 1);
+                        map.put(ArmorItem.Type.LEGGINGS, 1);
+                        map.put(ArmorItem.Type.CHESTPLATE, 1);
+                        map.put(ArmorItem.Type.HELMET, 1);
                     }),
                     // 2. Encantabilidad (int)
                     15,
