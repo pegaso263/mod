@@ -7,6 +7,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
@@ -43,15 +45,20 @@ public class EvolvingArmorItem extends ArmorItem {
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
-
-        // Solo ejecutar en el servidor y cuando el portador es un jugador
         if (!level.isClientSide() && entity instanceof Player player) {
-            // Verificar que este ítem sea el casco (para no ejecutar el chequeo 4 veces por tick)
-            // y que el jugador tenga las 4 piezas del set equipadas
-            if (stack.getItem() == this && player.getItemBySlot(EquipmentSlot.HEAD) == stack) {
-                if (hasFullSet(player)) {
-                    applySetEffects(player);
-                }
+            // Verificamos desde el casco para ejecutar el chequeo solo una vez por tick
+            if (this.getType() == Type.HELMET && hasFullSet(player)) {
+                applySetEffects(player);
+            }
+        }
+    }
+
+    @Override
+    public void onInventoryTick(ItemStack stack, Level level, Player player, int slotIndex, int selectedIndex) {
+        super.onInventoryTick(stack, level, player, slotIndex, selectedIndex);
+        if (!level.isClientSide()) {
+            if (this.getType() == Type.HELMET && hasFullSet(player)) {
+                applySetEffects(player);
             }
         }
     }
@@ -69,12 +76,13 @@ public class EvolvingArmorItem extends ArmorItem {
     }
 
     private void applySetEffects(Player player) {
-        // Velocidad I y Resistencia al Fuego se pueden refrescar continuamente (220 ticks = 11 seg)
+        // Velocidad I, Resistencia I y Resistencia al Fuego (220 ticks = 11 segundos)
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 220, 0, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 220, 0, false, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 220, 0, false, false, true));
 
-        // IMPORTANTE PARA REGENERACIÓN: Solo aplicarla si no la tiene o si le quedan menos de 20 ticks,
-        // de lo contrario el contador de curación se reinicia y nunca cura.
+        // Regeneración I: Solo se renueva cuando quedan 20 ticks (1 seg) o menos,
+        // permitiendo que se cumpla el ciclo de 50 ticks (2.5 seg) para curar vida.
         MobEffectInstance regen = player.getEffect(MobEffects.REGENERATION);
         if (regen == null || regen.getDuration() <= 20) {
             player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, 0, false, false, true));
