@@ -33,14 +33,12 @@ public class EvolvingArmorItem extends ArmorItem {
     public static void addDamageAbsorbed(ItemStack stack, float amount) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
             float current = tag.getFloat(DAMAGE_ABSORBED_KEY);
-            // Crecimiento infinito sin tope
             tag.putFloat(DAMAGE_ABSORBED_KEY, current + amount);
         });
     }
 
-    // Cada punto de daño absorbido otorga 0.01% extra de mitigación por pieza
     public static float getPieceMitigationBonus(ItemStack stack) {
-        return getDamageAbsorbed(stack) * 0.01f; 
+        return getDamageAbsorbed(stack) * 0.01f;
     }
 
     @Override
@@ -76,13 +74,26 @@ public class EvolvingArmorItem extends ArmorItem {
     }
 
     private void applySetEffects(Player player) {
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 220, 0, false, false, true));
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 220, 0, false, false, true));
+        ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
+        float mitigation = getPieceMitigationBonus(chest);
+
+        // Determinación del amplificador (0 = Nivel I, 1 = Nivel II, 2 = Nivel III, 3 = Nivel IV)
+        int amplifier = 0;
+        if (mitigation >= 80.0f) {
+            amplifier = 3;
+        } else if (mitigation >= 40.0f) {
+            amplifier = 2;
+        } else if (mitigation >= 11.0f) {
+            amplifier = 1;
+        }
+
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 220, amplifier, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 220, amplifier, false, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 220, 0, false, false, true));
 
         MobEffectInstance regen = player.getEffect(MobEffects.REGENERATION);
-        if (regen == null || regen.getDuration() <= 20) {
-            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, 0, false, false, true));
+        if (regen == null || regen.getDuration() <= 20 || regen.getAmplifier() < amplifier) {
+            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, amplifier, false, false, true));
         }
     }
 
@@ -96,7 +107,13 @@ public class EvolvingArmorItem extends ArmorItem {
         if (this.getType() == Type.BOOTS) {
             pTooltipComponents.add(Component.literal("Pasiva: Inmunidad al daño de caída.").withStyle(ChatFormatting.LIGHT_PURPLE));
         }
-        pTooltipComponents.add(Component.literal("Bonus de Set (4 pzas): Resistencia, Velocidad y Regeneración.").withStyle(ChatFormatting.YELLOW));
+        
+        int tier = 1;
+        if (mitigation >= 80.0f) tier = 4;
+        else if (mitigation >= 40.0f) tier = 3;
+        else if (mitigation >= 11.0f) tier = 2;
+
+        pTooltipComponents.add(Component.literal("Bonus de Set (Nivel " + tier + "): Resistencia, Velocidad y Regeneración").withStyle(ChatFormatting.YELLOW));
 
         super.appendHoverText(pStack, pContext, pTooltipComponents, pTooltipFlag);
     }
