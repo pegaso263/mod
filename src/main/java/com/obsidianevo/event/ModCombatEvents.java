@@ -20,57 +20,60 @@ public class ModCombatEvents {
 
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
-        // 1. CUANDO EL JUGADOR ATACA CON LA ESPADA (Aplica el daño acumulado actual, pero ya no sube puntos por cada golpe)
+        // 1. DAÑO DE LA ESPADA (Suma daño y otorga 1 punto de alma por baja)
         if (event.getSource().getEntity() instanceof Player attacker) {
             ItemStack mainHand = attacker.getMainHandItem();
             if (mainHand.getItem() instanceof EvolvingSwordItem) {
                 float bonusDamage = EvolvingSwordItem.getBonusDamage(mainHand);
                 event.setAmount(event.getAmount() + bonusDamage);
 
-                // Efectos adicionales según la fase evolutiva al golpear
                 int stage = EvolvingSwordItem.getEvolutionStage(mainHand);
                 LivingEntity target = event.getEntity();
                 if (stage >= 1) {
                     target.addEffect(new MobEffectInstance(MobEffects.WITHER, 100, 1));
                 }
                 if (stage >= 2 && attacker.getHealth() < attacker.getMaxHealth()) {
-                    attacker.heal(Math.min(4.0f, event.getAmount() * 0.03f)); // Pequeño robo de vida al golpear
+                    attacker.heal(Math.min(4.0f, event.getAmount() * 0.03f));
                 }
             }
         }
 
-        // 2. CUANDO EL JUGADOR RECIBE DAÑO CON LA ARMADURA
+        // 2. SISTEMA DE ADAPTACIÓN INFINITA DE LA ARMADURA
         if (event.getEntity() instanceof Player player) {
-            // Verificar si es daño de caída y lleva las botas evolutivas
+            // Inmunidad al daño de caída con las botas
             if (event.getSource().is(DamageTypes.FALL)) {
                 ItemStack boots = player.getItemBySlot(EquipmentSlot.FEET);
                 if (boots.getItem() instanceof EvolvingArmorItem) {
                     EvolvingArmorItem.addDamageAbsorbed(boots, event.getAmount());
-                    event.setCanceled(true); // Anula por completo el daño de caída
+                    event.setCanceled(true);
                     return;
                 }
             }
 
-            int totalLevels = 0;
-            int piecesEquipped = 0;
             float incomingDamage = event.getAmount();
+            float totalMitigationBonus = 0.0f;
+            int piecesEquipped = 0;
 
+            // Recorre las 4 piezas para aplicar absorción 1:1 y acumular mitigación
             for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
                 ItemStack armorPiece = player.getItemBySlot(slot);
                 if (armorPiece.getItem() instanceof EvolvingArmorItem) {
                     piecesEquipped++;
-                    EvolvingArmorItem.addDamageAbsorbed(armorPiece, incomingDamage * 0.25f);
-                    totalLevels += EvolvingArmorItem.getPieceLevel(armorPiece);
+                    // CADA 1 DE DAÑO RECIBIDO SUMA 1 PUNTO DE ABSORCIÓN A CADA PIEZA
+                    EvolvingArmorItem.addDamageAbsorbed(armorPiece, incomingDamage);
+                    totalMitigationBonus += EvolvingArmorItem.getPieceMitigationBonus(armorPiece);
                 }
             }
 
             if (piecesEquipped > 0) {
-                float damageReduction = Math.min(0.88f, totalLevels * 0.0022f);
-                float finalDamage = incomingDamage * (1.0f - damageReduction);
-                event.setAmount(finalDamage);
+                // Límite de seguridad del 95% de mitigación extra para mantener el juego divertido
+                float finalReduction = Math.min(0.95f, totalMitigationBonus / 100.0f);
+                float reducedDamage = incomingDamage * (1.0f - finalReduction);
+                event.setAmount(reducedDamage);
 
+                // Reflejo de daño proporcional al atacante
                 if (event.getSource().getEntity() instanceof LivingEntity attacker) {
-                    float reflectPercent = totalLevels * 0.003f;
+                    float reflectPercent = totalMitigationBonus * 0.005f;
                     attacker.hurt(player.damageSources().thorns(player), incomingDamage * reflectPercent);
                 }
             }
@@ -79,14 +82,11 @@ public class ModCombatEvents {
 
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
-        // 3. CUANDO UNA ENTIDAD MUERE A MANOS DEL JUGADOR CON LA ESPADA
+        // 3. PUNTOS DE ALMA DE LA ESPADA AL ELIMINAR UNA ENTIDAD (1 punto por baja)
         if (event.getSource().getEntity() instanceof Player attacker) {
             ItemStack mainHand = attacker.getMainHandItem();
             if (mainHand.getItem() instanceof EvolvingSwordItem) {
-                // Otorga una buena cantidad de Puntos de Alma al derrotar al enemigo (ej. 25 puntos por baja)
-                EvolvingSwordItem.addSoulPoints(mainHand, 5);
-                
-                // Opcional: Curación extra al eliminar enemigos como recompensa
+                EvolvingSwordItem.addSoulPoints(mainHand, 1);
                 attacker.heal(6.0f);
             }
         }
