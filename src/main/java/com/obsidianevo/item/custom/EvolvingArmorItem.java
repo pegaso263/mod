@@ -41,40 +41,44 @@ public class EvolvingArmorItem extends ArmorItem {
     }
 
     @Override
-    public void inventoryTick(ItemStack pStack, Level pLevel, Entity pEntity, int pSlotId, boolean pIsSelected) {
-        if (!pLevel.isClientSide() && pEntity instanceof Player player && player.tickCount % 40 == 0) {
-            if (hasFullSet(player)) {
-                int totalLevels = getTotalSetLevels(player);
-                player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 60, 0, false, false, true));
-                if (totalLevels >= 20) {
-                    player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 60, 0, false, false, true));
-                }
-                if (totalLevels >= 40) {
-                    player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, false, false, true));
-                    player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 60, 0, false, false, true));
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+        super.inventoryTick(stack, level, entity, slotId, isSelected);
+
+        // Solo ejecutar en el servidor y cuando el portador es un jugador
+        if (!level.isClientSide() && entity instanceof Player player) {
+            // Verificar que este ítem sea el casco (para no ejecutar el chequeo 4 veces por tick)
+            // y que el jugador tenga las 4 piezas del set equipadas
+            if (stack.getItem() == this && player.getItemBySlot(EquipmentSlot.HEAD) == stack) {
+                if (hasFullSet(player)) {
+                    applySetEffects(player);
                 }
             }
         }
-        super.inventoryTick(pStack, pLevel, pEntity, pSlotId, pIsSelected);
     }
 
     private boolean hasFullSet(Player player) {
-        for (ItemStack armorStack : player.getArmorSlots()) {
-            if (!(armorStack.getItem() instanceof EvolvingArmorItem)) {
-                return false;
-            }
-        }
-        return true;
+        ItemStack head = player.getItemBySlot(EquipmentSlot.HEAD);
+        ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
+        ItemStack legs = player.getItemBySlot(EquipmentSlot.LEGS);
+        ItemStack feet = player.getItemBySlot(EquipmentSlot.FEET);
+
+        return head.getItem() instanceof EvolvingArmorItem &&
+               chest.getItem() instanceof EvolvingArmorItem &&
+               legs.getItem() instanceof EvolvingArmorItem &&
+               feet.getItem() instanceof EvolvingArmorItem;
     }
 
-    private int getTotalSetLevels(Player player) {
-        int total = 0;
-        for (ItemStack armorStack : player.getArmorSlots()) {
-            if (armorStack.getItem() instanceof EvolvingArmorItem) {
-                total += getPieceLevel(armorStack);
-            }
+    private void applySetEffects(Player player) {
+        // Velocidad I y Resistencia al Fuego se pueden refrescar continuamente (220 ticks = 11 seg)
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 220, 0, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 220, 0, false, false, true));
+
+        // IMPORTANTE PARA REGENERACIÓN: Solo aplicarla si no la tiene o si le quedan menos de 20 ticks,
+        // de lo contrario el contador de curación se reinicia y nunca cura.
+        MobEffectInstance regen = player.getEffect(MobEffects.REGENERATION);
+        if (regen == null || regen.getDuration() <= 20) {
+            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, 0, false, false, true));
         }
-        return total;
     }
 
     @Override
