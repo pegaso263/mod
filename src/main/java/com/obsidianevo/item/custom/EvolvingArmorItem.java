@@ -17,12 +17,10 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
-import java.util.Random;
 
 public class EvolvingArmorItem extends ArmorItem {
     public static final String DAMAGE_ABSORBED_KEY = "DamageAbsorbed";
     public static final float MAX_DAMAGE_ABSORBED = 5000.0f;
-    private static final Random RANDOM = new Random();
 
     public EvolvingArmorItem(Holder<ArmorMaterial> pMaterial, Type pType, Properties pProperties) {
         super(pMaterial, pType, pProperties);
@@ -43,20 +41,6 @@ public class EvolvingArmorItem extends ArmorItem {
     // Escala de 0 a 100 niveles (1 nivel cada 50 de daño, hasta 5000)
     public static int getPieceLevel(ItemStack stack) {
         return Math.min(100, (int) (getDamageAbsorbed(stack) / 50.0f));
-    }
-
-    // Dureza progresiva: Entre más se usa y sube de nivel, más difícil es que pierda durabilidad (hasta 90% irrompible)
-    @Override
-    public void setDamage(ItemStack stack, int damage) {
-        int currentDamage = this.getDamage(stack);
-        if (damage > currentDamage) {
-            float progress = getDamageAbsorbed(stack) / MAX_DAMAGE_ABSORBED; // 0.0 a 1.0
-            float saveChance = progress * 0.90f; // Hasta 90% de ignorar desgaste
-            if (RANDOM.nextFloat() < saveChance) {
-                return; // Cancela la pérdida de durabilidad
-            }
-        }
-        super.setDamage(stack, damage);
     }
 
     @Override
@@ -106,13 +90,12 @@ public class EvolvingArmorItem extends ArmorItem {
     public void appendHoverText(ItemStack pStack, TooltipContext pContext, List<Component> pTooltipComponents, TooltipFlag pTooltipFlag) {
         float absorbed = getDamageAbsorbed(pStack);
         int level = getPieceLevel(pStack);
-        int hardnessBonus = (int) ((absorbed / MAX_DAMAGE_ABSORBED) * 90);
 
         pTooltipComponents.add(Component.literal("Nivel de Adaptación: " + level + "/100").withStyle(ChatFormatting.AQUA));
         pTooltipComponents.add(Component.literal("Daño absorbido: " + String.format("%.1f", absorbed) + " / 5000").withStyle(ChatFormatting.GRAY));
-        pTooltipComponents.add(Component.literal("Mitigación: +" + String.format("%.1f", level * 0.22f) + "% | Dureza extra: +" + hardnessBonus + "%").withStyle(ChatFormatting.GREEN));
+        pTooltipComponents.add(Component.literal("Mitigación extra: +" + String.format("%.1f", level * 0.22f) + "%").withStyle(ChatFormatting.GREEN));
         if (this.getType() == Type.BOOTS) {
-            pTooltipComponents.add(Component.literal("Pasiva de Botas: Inmunidad al daño de caída.").withStyle(ChatFormatting.BLUE));
+            pTooltipComponents.add(Component.literal("Pasiva: Inmunidad al daño de caída.").withStyle(ChatFormatting.BLUE));
         }
         pTooltipComponents.add(Component.literal("Bonus de Set (4 pzas): Resistencia, Velocidad y Regeneración.").withStyle(ChatFormatting.GOLD));
 
